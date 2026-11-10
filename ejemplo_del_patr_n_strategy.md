@@ -9,22 +9,21 @@ En un sistema de comercio electrónico, los clientes pueden finalizar sus compra
 Si el cálculo y la ejecución del pago se programan directamente dentro de la clase principal `Carrito` mediante condicionales (`if/else` o `switch` seguidos por tipo de pago):
 
 * **Violación de principios SOLID:** La clase `Carrito` asume responsabilidades que no le corresponden, acoplándose a las API externas y lógica de validación de cada pasarela.
-
 * **Código rígido y propenso a errores:** Cada vez que se agrega o modifica un método de pago, hay que modificar la clase `Carrito`, arriesgándose a romper los métodos de pago existentes.
-
 * **Atributos innecesarios:** La clase `Carrito` se llena de campos ambiguos (como `numeroTarjeta`, `cvv`, `emailPayPal`, `walletAddress`), muchos de los cuales quedarán vacíos o en `null` según el método elegido.
+
+---
 
 ## 2. La Solución
 
 El patrón **Strategy** sugiere extraer cada método de pago a su propia clase independiente que implemente una interfaz común (`EstrategiaPago`).
 
 * **Interfaz común:** Declara la operación `procesarPago(monto)`.
-
-* **Estrategias concretas:** Cada clase (`PagoTarjetaCredito`, `PagoPayPal`, `PagoCripto`) implementa la interfaz y mantiene en sus propios campos solo la información que necesita para operar.
-
+* **Estrategias concretas:** Cada clase (`PagoTarjetaCredito`, `PagoPayPal`, `PagoCripto`, `PagoPuntosFidelidad`) implementa la interfaz y mantiene en sus propios campos solo la información que necesita para operar.
 * **Contexto desacoplado:** La clase `Carrito` guarda una referencia a la interfaz `EstrategiaPago`. En lugar de ejecutar la lógica de pago directamente, le **delega** la tarea a la estrategia configurada.
-
 * **Cambio dinámico:** El cliente puede cambiar la estrategia de pago en tiempo de ejecución (`setEstrategiaPago`) antes de realizar el *checkout*.
+
+---
 
 ## 3. Estructura de la Solución
 
@@ -47,6 +46,10 @@ classDiagram
         -walletAddress: String
         +procesarPago(monto: double) boolean
     }
+    class PagoPuntosFidelidad {
+        -idPuntos: String
+        +procesarPago(monto: double) boolean
+    }
     class Carrito {
         -total: double
         -estrategiaPago: EstrategiaPago
@@ -57,8 +60,11 @@ classDiagram
     EstrategiaPago <|.. PagoTarjetaCredito
     EstrategiaPago <|.. PagoPayPal
     EstrategiaPago <|.. PagoCripto
+    EstrategiaPago <|.. PagoPuntosFidelidad
     Carrito o--> EstrategiaPago
 ```
+
+---
 
 ## 4. Código en Java
 
@@ -132,6 +138,25 @@ public class PagoCripto implements EstrategiaPago {
 ```
 
 ```java
+// PagoPuntosFidelidad.java
+// ESTRATEGIA CONCRETA 4: Canje de puntos acumulados por el usuario.
+public class PagoPuntosFidelidad implements EstrategiaPago {
+
+    private final String idPuntos;
+
+    public PagoPuntosFidelidad(String idPuntos) {
+        this.idPuntos = idPuntos;
+    }
+
+    @Override
+    public boolean procesarPago(double monto) {
+        System.out.println("  [Puntos] Canjeando " + monto + " puntos de fidelidad de la cuenta " + idPuntos + ".");
+        return true;
+    }
+}
+```
+
+```java
 // Carrito.java
 // CONTEXTO: No sabe COMO funciona cada pasarela de pago; solo invoca la estrategia configurada.
 public class Carrito {
@@ -161,7 +186,7 @@ public class Carrito {
 
 ```java
 // App.java
-// CLIENTE: Configura el contexto y selecciona la estrategia deseada.
+// CLIENTE: Configura el contexto y selecciona la estrategia deseada mediante clases concretas.
 public class App {
     public static void main(String[] args) {
         Carrito carrito = new Carrito();
@@ -186,15 +211,14 @@ public class App {
 
         System.out.println("---");
 
-        // 4. Estrategia personalizada en linea (expresion Lambda)
-        carrito.setEstrategiaPago(monto -> {
-            System.out.println("  [Puntos] Canjeando " + monto + " puntos de fidelidad acumulados.");
-            return true;
-        });
+        // 4. Pago con Puntos de Fidelidad (Clase concreta tradicional)
+        carrito.setEstrategiaPago(new PagoPuntosFidelidad("VIP-98765"));
         carrito.realizarCheckout();
     }
 }
 ```
+
+---
 
 ## 5. Salida Esperada
 
@@ -209,5 +233,5 @@ Iniciando pago por un total de $199.99...
   [Cripto] Generando QR para $199.99 USD hacia la billetera 0x71C7...
 ---
 Iniciando pago por un total de $199.99...
-  [Puntos] Canjeando 199.99 puntos de fidelidad acumulados.
+  [Puntos] Canjeando 199.99 puntos de fidelidad de la cuenta VIP-98765.
 ```
