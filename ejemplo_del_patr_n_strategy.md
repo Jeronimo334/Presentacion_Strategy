@@ -1,4 +1,4 @@
-# Patrón de Diseño: Strategy (Estrategia)
+# Patrón de Diseño: Strategy
 
 El patrón **Strategy** es un patrón de comportamiento que permite **definir una familia de algoritmos**, colocar cada uno de ellos en una clase independiente y hacer que sus objetos sean **intercambiables** en tiempo de ejecución.
 
