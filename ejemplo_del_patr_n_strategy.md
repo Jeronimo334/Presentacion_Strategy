@@ -2,8 +2,6 @@
 
 El patrón **Strategy** es un patrón de comportamiento que permite **definir una familia de algoritmos**, colocar cada uno de ellos en una clase independiente y hacer que sus objetos sean **intercambiables** en tiempo de ejecución.
 
----
-
 ## 1. El Problema
 
 En un sistema de comercio electrónico, los clientes pueden finalizar sus compras pagando a través de múltiples canales (tarjeta de crédito, PayPal, criptomonedas, puntos de fidelidad, etc.).
@@ -11,23 +9,58 @@ En un sistema de comercio electrónico, los clientes pueden finalizar sus compra
 Si el cálculo y la ejecución del pago se programan directamente dentro de la clase principal `Carrito` mediante condicionales (`if/else` o `switch` seguidos por tipo de pago):
 
 * **Violación de principios SOLID:** La clase `Carrito` asume responsabilidades que no le corresponden, acoplándose a las API externas y lógica de validación de cada pasarela.
-* **Código rígido y propenso a errores:** Cada vez que se agrega o modifica un método de pago, hay que modificar la clase `Carrito`, arriesgándose a romper los métodos de pago existentes.
-* **Atributos innecesarios:** La clase `Carrito` se llena de campos ambiguos (como `numeroTarjeta`, `cvv`, `emailPayPal`, `walletAddress`), muchos de los cuales quedarán vacíos o en `null` según el método elegido.
 
----
+* **Código rígido y propenso a errores:** Cada vez que se agrega o modifica un método de pago, hay que modificar la clase `Carrito`, arriesgándose a romper los métodos de pago existentes.
+
+* **Atributos innecesarios:** La clase `Carrito` se llena de campos ambiguos (como `numeroTarjeta`, `cvv`, `emailPayPal`, `walletAddress`), muchos de los cuales quedarán vacíos o en `null` según el método elegido.
 
 ## 2. La Solución
 
 El patrón **Strategy** sugiere extraer cada método de pago a su propia clase independiente que implemente una interfaz común (`EstrategiaPago`).
 
 * **Interfaz común:** Declara la operación `procesarPago(monto)`.
+
 * **Estrategias concretas:** Cada clase (`PagoTarjetaCredito`, `PagoPayPal`, `PagoCripto`) implementa la interfaz y mantiene en sus propios campos solo la información que necesita para operar.
+
 * **Contexto desacoplado:** La clase `Carrito` guarda una referencia a la interfaz `EstrategiaPago`. En lugar de ejecutar la lógica de pago directamente, le **delega** la tarea a la estrategia configurada.
+
 * **Cambio dinámico:** El cliente puede cambiar la estrategia de pago en tiempo de ejecución (`setEstrategiaPago`) antes de realizar el *checkout*.
 
----
+## 3. Estructura de la Solución
 
-## 3. Código en Java
+```mermaid
+classDiagram
+    class EstrategiaPago {
+        <<interface>>
+        +procesarPago(monto: double) boolean
+    }
+    class PagoTarjetaCredito {
+        -numeroTarjeta: String
+        -cvv: String
+        +procesarPago(monto: double) boolean
+    }
+    class PagoPayPal {
+        -email: String
+        +procesarPago(monto: double) boolean
+    }
+    class PagoCripto {
+        -walletAddress: String
+        +procesarPago(monto: double) boolean
+    }
+    class Carrito {
+        -total: double
+        -estrategiaPago: EstrategiaPago
+        +agregarProducto(precio: double)
+        +setEstrategiaPago(estrategia: EstrategiaPago)
+        +realizarCheckout() boolean
+    }
+    EstrategiaPago <|.. PagoTarjetaCredito
+    EstrategiaPago <|.. PagoPayPal
+    EstrategiaPago <|.. PagoCripto
+    Carrito o--> EstrategiaPago
+```
+
+## 4. Código en Java
 
 ```java
 // EstrategiaPago.java
@@ -163,9 +196,7 @@ public class App {
 }
 ```
 
----
-
-## 4. Salida Esperada
+## 5. Salida Esperada
 
 ```text
 Iniciando pago por un total de $199.99...
